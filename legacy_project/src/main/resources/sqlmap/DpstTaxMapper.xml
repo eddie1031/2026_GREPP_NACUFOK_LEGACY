@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dpstTax">
+
+    <!-- 세금계산 -->
+    <select id="callTaxCalc" parameterType="hashmap" statementType="CALLABLE">
+        { CALL PKG_DPST_TAX.SP_CALC_TAX(
+              #{acno,    mode=IN,  jdbcType=VARCHAR}
+            , #{intrAmt, mode=IN,  jdbcType=NUMERIC}
+            , #{pdcd,    mode=IN,  jdbcType=VARCHAR}
+            , #{taxAmt,  mode=OUT, jdbcType=NUMERIC} ) }
+    </select>
+</mapper>

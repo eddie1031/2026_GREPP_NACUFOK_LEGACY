@@ -1,0 +1,26 @@
+services:
+  oracle-db:
+    image: gvenzl/oracle-free:23-slim
+    container_name: sh-bank-oracle-db
+    ports:
+      - "1521:1521"
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:-Oracle_1234}
+      APP_USER: ${APP_USER:-DPST_APP}
+      APP_USER_PASSWORD: ${APP_USER_PASSWORD:-DpstApp_1234}
+      ORACLE_DATABASE: ${ORACLE_DATABASE:-DPSTPRD}
+    volumes:
+      - ./db/01_schema.sql:/container-entrypoint-initdb.d/01_schema.sql:ro
+      - ./db/02_pkg_dpst_tax.sql:/container-entrypoint-initdb.d/02_pkg_dpst_tax.sql:ro
+      - ./db/03_sample_data.sql:/container-entrypoint-initdb.d/03_sample_data.sql:ro
+      - ./db/data:/opt/oracle/oradata
+
+  dpst-app:
+    build:
+      context: ./legacy_project
+    container_name: sh-bank-dpst-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - oracle-db
+

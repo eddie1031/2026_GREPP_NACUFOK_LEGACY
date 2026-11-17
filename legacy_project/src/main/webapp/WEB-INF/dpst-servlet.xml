@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+
+    <bean id="urlMapping" class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+        <property name="mappings">
+            <props>
+                <prop key="/dpst/close.do">dpstCloseController</prop>
+                <prop key="/dpst/closeExpect.do">dpstCloseController</prop>
+                <prop key="/dpst/closeHist.do">dpstCloseController</prop>
+            </props>
+        </property>
+    </bean>
+
+    <bean id="dpstMethodResolver" class="org.springframework.web.servlet.mvc.multiaction.PropertiesMethodNameResolver">
+        <property name="mappings">
+            <props>
+                <prop key="/dpst/close.do">close</prop>
+                <prop key="/dpst/closeExpect.do">expect</prop>
+                <prop key="/dpst/closeHist.do">histList</prop>
+            </props>
+        </property>
+    </bean>
+
+    <bean id="dpstCloseController" class="io.eddie.dpst.web.DpstCloseController">
+        <property name="methodNameResolver" ref="dpstMethodResolver"/>
+        <property name="dpstCloseService" ref="dpstCloseService"/>
+        <property name="dpstCloseDao" ref="dpstCloseDao"/>
+    </bean>
+</beans>

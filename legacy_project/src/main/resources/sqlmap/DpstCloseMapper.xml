@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dpstClose">
+
+    <!-- 계좌정보 조회 -->
+    <select id="selectAcntInfo" parameterType="string" resultType="hashmap">
+        SELECT A.ACNO        AS "acno"       /* 계좌번호 */
+             , A.CUST_NO     AS "custNo"     /* 고객번호 */
+             , C.CUST_NM     AS "custNm"     /* 고객명 */
+             , A.PDCD        AS "pdcd"       /* 상품코드 */
+             , A.PRCP_AMT    AS "prcpAmt"    /* 원금 */
+             , A.OPN_DT      AS "opnDt"      /* 개설일자 */
+             , A.MTRT_DT     AS "mtrtDt"     /* 만기일자 */
+             , A.ACNT_STCD   AS "acntStcd"   /* 계좌상태코드 */
+             , R.BSRT        AS "bsrt"
+             , R.PRFT_RT     AS "prftRt"
+          FROM TB_DPST_ACNT A
+          JOIN TB_CUST C ON C.CUST_NO = A.CUST_NO
+          JOIN TB_INTR_RATE R ON R.PDCD = A.PDCD AND R.APLY_DT = A.OPN_DT
+         WHERE A.ACNO = #{acno}
+    </select>
+
+    <!-- 단말 예상이자 (DP3011) -->
+    <select id="selectExpectIntr" parameterType="hashmap" resultType="hashmap">
+        SELECT ROUND(A.PRCP_AMT
+                 * CASE WHEN TRUNC(MONTHS_BETWEEN(TO_DATE(#{cnclDt},'YYYYMMDD'), TO_DATE(A.OPN_DT,'YYYYMMDD'))) &lt; 1 THEN 0.1
+                        WHEN TRUNC(MONTHS_BETWEEN(TO_DATE(#{cnclDt},'YYYYMMDD'), TO_DATE(A.OPN_DT,'YYYYMMDD'))) &lt; 3 THEN R.BSRT * 0.3
+                        WHEN TRUNC(MONTHS_BETWEEN(TO_DATE(#{cnclDt},'YYYYMMDD'), TO_DATE(A.OPN_DT,'YYYYMMDD'))) &lt; 6 THEN R.BSRT * 0.5
+                        WHEN A.OPN_DT &lt; '20150101' THEN R.BSRT * 0.5
+                        WHEN TRUNC(MONTHS_BETWEEN(TO_DATE(#{cnclDt},'YYYYMMDD'), TO_DATE(A.OPN_DT,'YYYYMMDD'))) &lt; 12 THEN R.BSRT * 0.6
+                        ELSE R.BSRT * 0.7 END
+                 / 100 * (TO_DATE(#{cnclDt},'YYYYMMDD') - TO_DATE(A.OPN_DT,'YYYYMMDD')) / 365, 0) AS EXPECT_INTR
+          FROM TB_DPST_ACNT A
+          JOIN TB_INTR_RATE R ON R.PDCD = A.PDCD AND R.APLY_DT = A.OPN_DT
+         WHERE A.ACNO = #{acno}
+    </select>
+
+    <!-- 해지 처리 -->
+    <update id="updateAcntClose" parameterType="hashmap">
+        UPDATE TB_DPST_ACNT
+           SET ACNT_STCD = '9'
+             , CNCL_DT   = #{cnclDt}
+         WHERE ACNO = #{acno}
+    </update>
+
+    <!-- 해지 이력 -->
+    <insert id="insertCloseHist" parameterType="hashmap">
+        INSERT INTO TB_DPST_CLOSE_HIST (ACNO, CNCL_DT, INTR_AMT, TAX_AMT, REG_DTM)
+        VALUES (#{acno}, #{cnclDt}, #{intrAmt}, #{taxAmt}, SYSDATE)
+    </insert>
+
+    <!-- 해지 이력 목록 -->
+    <select id="selectCloseHistList" parameterType="hashmap" resultType="hashmap">
+        SELECT H.ACNO, H.CNCL_DT, H.INTR_AMT, H.TAX_AMT
+          FROM TB_DPST_CLOSE_HIST H
+          JOIN TB_DPST_ACNT A ON A.ACNO = H.ACNO
+         WHERE A.CUST_NO = #{custNo}
+         ORDER BY ${sortCol}
+    </select>
+
+    <!-- 계좌 목록 (만기 배치용) -->
+    <select id="selectAllAcntList" resultType="hashmap">
+        SELECT ACNO      AS "acno"
+             , MTRT_DT   AS "mtrtDt"
+             , ACNT_STCD AS "acntStcd"
+          FROM TB_DPST_ACNT
+    </select>
+
+    <!-- 휴면 -->
+    <update id="updateDormant" parameterType="string">
+        UPDATE TB_DPST_ACNT SET ACNT_STCD = '5'
+         WHERE ACNT_STCD = '9' AND CNCL_DT &lt; #{baseDt}
+    </update>
+</mapper>
